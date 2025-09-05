@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 
 // --- API functions ---
-const BASE_URL = "http://localhost:8081/api/notes";
+const API_BASE_URL = "https://notesapp-backend-2-y9fw.onrender.com/api";
+
 
 const getNotes = async () => {
   const res = await fetch(BASE_URL);
