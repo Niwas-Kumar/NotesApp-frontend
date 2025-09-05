@@ -1,60 +1,64 @@
 import React, { useState, useEffect } from "react";
-
-const BASE_URL = "https://notesapp-backend-2-y9fw.onrender.com/api";
+import {
+  getNotes,
+  createNote,
+  updateNote,
+  deleteNote,
+  shareNote,
+} from "./api";
 
 function App() {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState({ title: "", content: "" });
+  const [editingId, setEditingId] = useState(null);
+  const [editingNote, setEditingNote] = useState({ title: "", content: "" });
 
-  // Fetch notes
   useEffect(() => {
-    fetch(`${BASE_URL}/notes`)
-      .then((res) => res.json())
-      .then((data) => setNotes(data))
-      .catch((err) => console.error("Error fetching notes:", err));
+    getNotes()
+      .then(setNotes)
+      .catch((err) => console.error("Error loading notes:", err));
   }, []);
 
-  // Create note
-  const handleCreate = () => {
-    fetch(`${BASE_URL}/notes`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newNote),
-    })
-      .then((res) => res.json())
-      .then((note) => {
-        setNotes([...notes, note]);
-        setNewNote({ title: "", content: "" });
-      });
+  const handleCreate = async () => {
+    try {
+      const note = await createNote(newNote);
+      setNotes([...notes, note]);
+      setNewNote({ title: "", content: "" });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create note");
+    }
   };
 
-  // Update note
-  const handleUpdate = (id, updatedNote) => {
-    fetch(`${BASE_URL}/notes/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedNote),
-    })
-      .then((res) => res.json())
-      .then((note) => {
-        setNotes(notes.map((n) => (n.id === id ? note : n)));
-      });
+  const handleUpdate = async (id) => {
+    try {
+      const updated = await updateNote(id, editingNote);
+      setNotes(notes.map((n) => (n.id === id ? updated : n)));
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update note");
+    }
   };
 
-  // Delete note
-  const handleDelete = (id) => {
-    fetch(`${BASE_URL}/notes/${id}`, { method: "DELETE" }).then(() => {
+  const handleDelete = async (id) => {
+    try {
+      await deleteNote(id);
       setNotes(notes.filter((n) => n.id !== id));
-    });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete note");
+    }
   };
 
-  // Share note
-  const handleShare = (id) => {
-    fetch(`${BASE_URL}/notes/${id}/share`, { method: "POST" })
-      .then((res) => res.json())
-      .then((data) => {
-        alert(`Shareable Link: ${data.publicUrl}`);
-      });
+  const handleShare = async (id) => {
+    try {
+      const { publicUrl } = await shareNote(id);
+      alert(`Shareable Link: ${publicUrl}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to share note");
+    }
   };
 
   return (
@@ -91,20 +95,43 @@ function App() {
                 marginBottom: "10px",
               }}
             >
-              <h3>{note.title}</h3>
-              <p>{note.content}</p>
-              <button
-                onClick={() =>
-                  handleUpdate(note.id, {
-                    ...note,
-                    title: note.title + " (updated)",
-                  })
-                }
-              >
-                Update
-              </button>
-              <button onClick={() => handleDelete(note.id)}>Delete</button>
-              <button onClick={() => handleShare(note.id)}>Share</button>
+              {editingId === note.id ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingNote.title}
+                    onChange={(e) =>
+                      setEditingNote({ ...editingNote, title: e.target.value })
+                    }
+                  />
+                  <textarea
+                    value={editingNote.content}
+                    onChange={(e) =>
+                      setEditingNote({
+                        ...editingNote,
+                        content: e.target.value,
+                      })
+                    }
+                  />
+                  <button onClick={() => handleUpdate(note.id)}>Save</button>
+                  <button onClick={() => setEditingId(null)}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <h3>{note.title}</h3>
+                  <p>{note.content}</p>
+                  <button
+                    onClick={() => {
+                      setEditingId(note.id);
+                      setEditingNote({ title: note.title, content: note.content });
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(note.id)}>Delete</button>
+                  <button onClick={() => handleShare(note.id)}>Share</button>
+                </>
+              )}
             </li>
           ))}
         </ul>
