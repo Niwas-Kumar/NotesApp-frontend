@@ -1,12 +1,63 @@
 import React, { useEffect, useState } from "react";
-import { getNotes, createNote, updateNote, deleteNote, shareNote } from "./api";
 
+// --- API functions ---
+const BASE_URL = "http://localhost:8081/api/notes";
+
+const getNotes = async () => {
+  const res = await fetch(BASE_URL);
+  return res.json();
+};
+
+const createNote = async (note) => {
+  const res = await fetch(BASE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(note),
+  });
+  return res.json();
+};
+
+const updateNote = async (id, note) => {
+  const res = await fetch(`${BASE_URL}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(note),
+  });
+  return res.json();
+};
+
+const deleteNote = async (id) => {
+  const res = await fetch(`${BASE_URL}/${id}`, { method: "DELETE" });
+  return res.json();
+};
+
+const shareNote = async (id) => {
+  const res = await fetch(`${BASE_URL}/${id}/share`, { method: "POST" });
+  return res.json(); // returns { publicUrl: "http://..." }
+};
+
+const getSharedNote = async (token) => {
+  const res = await fetch(`http://localhost:8081/api/public/${token}`);
+  if (!res.ok) throw new Error("Note not found");
+  return res.json();
+};
+
+// --- App component ---
 function App() {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState({ title: "", content: "" });
+  const [sharedNote, setSharedNote] = useState(null);
+  const [shareToken, setShareToken] = useState(null);
 
   useEffect(() => {
-    loadNotes();
+    const path = window.location.pathname;
+    if (path.startsWith("/n/")) {
+      const token = path.split("/n/")[1];
+      setShareToken(token);
+      fetchSharedNote(token);
+    } else {
+      loadNotes();
+    }
   }, []);
 
   const loadNotes = async () => {
@@ -19,28 +70,36 @@ function App() {
     }
   };
 
+  const fetchSharedNote = async (token) => {
+    try {
+      const note = await getSharedNote(token);
+      setSharedNote(note);
+    } catch (err) {
+      console.error("Shared note not found", err);
+      setSharedNote(null);
+    }
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!newNote.title || !newNote.content) return;
-
     try {
       await createNote(newNote);
       setNewNote({ title: "", content: "" });
       loadNotes();
-    } catch (error) {
-      console.error("Error creating note:", error);
+    } catch (err) {
+      console.error("Error creating note:", err);
     }
   };
 
   const handleUpdate = async (note) => {
     const updatedContent = prompt("Edit note content:", note.content);
     if (!updatedContent) return;
-
     try {
       await updateNote(note.id, { ...note, content: updatedContent });
       loadNotes();
-    } catch (error) {
-      console.error("Error updating note:", error);
+    } catch (err) {
+      console.error("Error updating note:", err);
     }
   };
 
@@ -49,22 +108,34 @@ function App() {
     try {
       await deleteNote(id);
       loadNotes();
-    } catch (error) {
-      console.error("Error deleting note:", error);
+    } catch (err) {
+      console.error("Error deleting note:", err);
     }
   };
 
   const handleShare = async (id) => {
     try {
       const result = await shareNote(id);
-      navigator.clipboard.writeText(result.publicUrl); // copy to clipboard
+      // Use backend publicUrl directly
+      navigator.clipboard.writeText(result.publicUrl);
       alert(`Shareable link copied to clipboard:\n${result.publicUrl}`);
-    } catch (error) {
-      console.error("Error sharing note:", error);
+    } catch (err) {
+      console.error("Error sharing note:", err);
       alert("Failed to create shareable link");
     }
   };
 
+  // --- Render shared note ---
+  if (shareToken && sharedNote) {
+    return (
+      <div style={{ maxWidth: "600px", margin: "50px auto", fontFamily: "Arial" }}>
+        <h1 style={{ textAlign: "center" }}>{sharedNote.title}</h1>
+        <pre style={{ whiteSpace: "pre-wrap", fontSize: "16px" }}>{sharedNote.content}</pre>
+      </div>
+    );
+  }
+
+  // --- Render main app ---
   return (
     <div style={{ maxWidth: "600px", margin: "50px auto", fontFamily: "Arial" }}>
       <h1 style={{ textAlign: "center" }}>📝 Notes App</h1>
@@ -89,13 +160,7 @@ function App() {
         />
         <button
           type="submit"
-          style={{
-            padding: "10px 20px",
-            background: "#4CAF50",
-            color: "white",
-            border: "none",
-            cursor: "pointer",
-          }}
+          style={{ padding: "10px 20px", background: "#4CAF50", color: "white", border: "none", cursor: "pointer" }}
         >
           Add Note
         </button>
@@ -120,9 +185,21 @@ function App() {
               <h3 style={{ margin: "0 0 10px 0" }}>{note.title}</h3>
               <p>{note.content}</p>
               <div style={{ marginTop: "10px" }}>
-                <button onClick={() => handleUpdate(note)} style={{ marginRight: "10px" }}>Edit</button>
-                <button onClick={() => handleDelete(note.id)} style={{ marginRight: "10px", background: "#f44336", color: "white", border: "none" }}>Delete</button>
-                <button onClick={() => handleShare(note.id)} style={{ background: "#2196F3", color: "white", border: "none" }}>Share</button>
+                <button onClick={() => handleUpdate(note)} style={{ marginRight: "10px" }}>
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(note.id)}
+                  style={{ marginRight: "10px", background: "#f44336", color: "white", border: "none" }}
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => handleShare(note.id)}
+                  style={{ background: "#2196F3", color: "white", border: "none" }}
+                >
+                  Share
+                </button>
               </div>
             </li>
           ))}

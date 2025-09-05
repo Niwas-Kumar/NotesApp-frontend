@@ -32,5 +32,12 @@ export const deleteNote = async (id) => {
 // Share
 export const shareNote = async (id) => {
   const res = await fetch(`${BASE_URL}/${id}/share`, { method: "POST" });
-  return res.json(); // returns { publicUrl: "http://..." }
+  return res.json(); // backend should return { share_token: "..." }
+};
+
+// Fetch shared note by token (public endpoint)
+export const getSharedNote = async (token) => {
+  const res = await fetch(`http://localhost:8081/api/shared/${token}`);
+  if (!res.ok) throw new Error("Note not found");
+  return res.json();
 };
