@@ -13,12 +13,14 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [editingNote, setEditingNote] = useState({ title: "", content: "" });
 
+  // Fetch all notes
   useEffect(() => {
     getNotes()
       .then(setNotes)
       .catch((err) => console.error("Error loading notes:", err));
   }, []);
 
+  // Create note
   const handleCreate = async () => {
     try {
       const note = await createNote(newNote);
@@ -30,6 +32,7 @@ function App() {
     }
   };
 
+  // Update note
   const handleUpdate = async (id) => {
     try {
       const updated = await updateNote(id, editingNote);
@@ -41,6 +44,7 @@ function App() {
     }
   };
 
+  // Delete note
   const handleDelete = async (id) => {
     try {
       await deleteNote(id);
@@ -51,10 +55,11 @@ function App() {
     }
   };
 
+  // Share single note
   const handleShare = async (id) => {
     try {
       const { publicUrl } = await shareNote(id);
-      alert(`Shareable Link: ${publicUrl}`);
+      alert(`Share this note: ${publicUrl}`);
     } catch (err) {
       console.error(err);
       alert("Failed to share note");
@@ -76,7 +81,9 @@ function App() {
         <textarea
           placeholder="Content"
           value={newNote.content}
-          onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+          onChange={(e) =>
+            setNewNote({ ...newNote, content: e.target.value })
+          }
         />
         <button onClick={handleCreate}>Add Note</button>
       </div>

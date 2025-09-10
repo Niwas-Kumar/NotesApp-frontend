@@ -1,4 +1,3 @@
-// api.js
 const BASE_URL = "https://notesapp-backend-2-y9fw.onrender.com/api";
 
 // --- CRUD ---
@@ -31,16 +30,17 @@ export const updateNote = async (id, note) => {
 export const deleteNote = async (id) => {
   const res = await fetch(`${BASE_URL}/notes/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete note");
-  return true;
+  return true; // success
 };
 
 // --- Share ---
 export const shareNote = async (id) => {
   const res = await fetch(`${BASE_URL}/notes/${id}/share`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to share note");
-  return res.json(); // { publicUrl: "..." }
+  return res.json(); // returns { publicUrl: "..." }
 };
 
+// --- Fetch shared note by token ---
 export const getSharedNote = async (token) => {
   const res = await fetch(`${BASE_URL}/public/${token}`);
   if (!res.ok) throw new Error("Note not found");
